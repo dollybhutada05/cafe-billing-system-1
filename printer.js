@@ -1,6 +1,7 @@
 /**
  * Thermal Printer Simulation – Standalone Page
  * Reads cart data from localStorage and prints a receipt
+ * Sends a 'clear-cart' signal back to billing page when done
  */
 
 // ===== DOM REFS =====
@@ -12,6 +13,19 @@ const ledPaper = document.getElementById('led-paper');
 const ledError = document.getElementById('led-error');
 const scanline = document.getElementById('thermal-scanline');
 const closeBtn = document.getElementById('close-printer-btn');
+
+// ===== BROADCAST CHANNEL (send clear-cart to billing) =====
+const channel = new BroadcastChannel('cafe-billing-channel');
+
+function notifyBillingClearCart() {
+  try {
+    channel.postMessage('clear-cart');
+    console.log('📤 Sent clear-cart signal to billing page.');
+  } catch (e) {
+    // Channel might be closed or unavailable
+    console.log('Could not send clear-cart signal.', e);
+  }
+}
 
 // ===== STATE =====
 let isPrinting = false;
@@ -144,7 +158,23 @@ function tearReceipt() {
     receipt.style.maxHeight = '0';
     receipt.style.opacity = '0';
     receipt.style.transform = 'translateY(10px) scale(0.98)';
+
+    // 🔁 Notify billing page to clear the cart after tear-off
+    notifyBillingClearCart();
+
+    // Optionally close the tab automatically after a moment
+    // setTimeout(() => window.close(), 500);
   }, 850);
+}
+
+// ===== CLOSE HANDLER =====
+function handleClose() {
+  // If the receipt is complete but not torn, send clear signal anyway
+  if (isComplete) {
+    notifyBillingClearCart();
+  }
+  // If printing is in progress, maybe wait or just close
+  window.close();
 }
 
 // ===== LOAD DATA & PRINT =====
@@ -155,7 +185,7 @@ function loadAndPrint() {
     try {
       const cart = JSON.parse(cartData);
       printReceipt(cart);
-      // Clear storage after printing so it doesn't re-print on refresh
+      // Optional: clear storage after printing so it doesn't re-print on refresh
       // localStorage.removeItem('cafeCart');
     } catch (e) {
       console.error('Invalid cart data:', e);
@@ -179,12 +209,15 @@ if (tearPill) {
   });
 }
 
-closeBtn.addEventListener('click', () => window.close());
+closeBtn.addEventListener('click', handleClose);
+
+// Also notify billing when the page is about to unload (if receipt was completed)
+window.addEventListener('beforeunload', () => {
+  if (isComplete) {
+    notifyBillingClearCart();
+  }
+});
 
 // ===== INIT =====
 setLEDs('idle');
 loadAndPrint();
-
-// If the user refreshes the page, we don't want to re-print automatically,
-// but we keep the receipt visible. On refresh, we check if there's data.
-// Also handle case where page is opened directly without data.
