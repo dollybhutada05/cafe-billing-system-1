@@ -26,7 +26,7 @@ body {
   overflow-x: hidden;
 }
 
-/* ===== APP CONTAINER ===== */
+
 .pos-app-container {
   min-height: 100vh;
   display: flex;
@@ -36,7 +36,7 @@ body {
   overflow: hidden;
 }
 
-/* ===== AMBIENT GLOW ===== */
+
 .ambient-glow-mesh {
   position: absolute;
   border-radius: 9999px;
@@ -59,7 +59,7 @@ body {
   background: radial-gradient(circle, rgba(99, 102, 241, 0.14) 0%, transparent 70%);
 }
 
-/* ===== HEADER ===== */
+
 .pos-header {
   position: relative;
   display: flex;
@@ -125,7 +125,7 @@ body {
   white-space: nowrap;
 }
 
-/* ===== WORKSPACE ===== */
+
 .pos-workspace {
   position: relative;
   flex: 1;
@@ -137,7 +137,6 @@ body {
   overflow: hidden;
 }
 
-/* ===== MENU SECTION ===== */
 .menu-section {
   background: var(--glass-bg-card);
   backdrop-filter: var(--glass-blur);
@@ -200,7 +199,7 @@ body {
   filter: brightness(1.1);
 }
 
-/* ===== BILLING SECTION ===== */
+
 .billing-section {
   background: var(--glass-bg-card);
   backdrop-filter: var(--glass-blur);
@@ -302,7 +301,7 @@ body {
   filter: none;
 }
 
-/* ===== RESPONSIVE ===== */
+
 @media (max-width: 768px) {
   .pos-workspace {
     grid-template-columns: 1fr;
