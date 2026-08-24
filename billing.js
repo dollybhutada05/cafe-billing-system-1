@@ -1,6 +1,7 @@
 /**
  * Urban Brew Cafe – Billing System
  * Handles menu rendering, cart management, and printing
+ * Now listens for clear-cart signals from the printer page
  */
 
 // ===== MENU DATA =====
@@ -29,6 +30,18 @@ const totalEl = document.getElementById('total');
 const printBtn = document.getElementById('print-receipt-btn');
 const statusEl = document.getElementById('header-status');
 const pulseIndicator = document.getElementById('pulse-indicator');
+
+// ===== BROADCAST CHANNEL (listen for clear-cart from printer) =====
+const channel = new BroadcastChannel('cafe-billing-channel');
+channel.onmessage = (event) => {
+  if (event.data === 'clear-cart') {
+    cart = [];
+    updateCart();
+    setStatus('Cart cleared by printer', true);
+    // Optional: show a brief notification
+    console.log('🔄 Cart cleared by printer page.');
+  }
+};
 
 // ===== RENDER MENU =====
 function renderMenu() {
@@ -74,11 +87,6 @@ function changeQty(id, delta) {
     }
     updateCart();
   }
-}
-
-function clearCart() {
-  cart = [];
-  updateCart();
 }
 
 function getSubtotal() {
