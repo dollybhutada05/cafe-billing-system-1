@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Urban Brew Cafe – Billing</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+  
+  <style>
+    :root {
+      --bg-color: #f4f6f8;
+      --card-bg: #ffffff;
+      --primary: #5c3d2e;
+      --accent: #b85c38;
+      --text: #2d2d2d;
+      --border: #e2e8f0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .pos-app-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .pos-header {
+      background-color: var(--primary);
+      color: white;
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .terminal-badge {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.8rem;
+      color: #d1d5db;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .pulse-indicator {
+      width: 8px;
+      height: 8px;
+      background-color: #10b981;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .pos-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .header-status-pill {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 0.4rem 0.8rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+    }
+
+    .pos-workspace {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 1.5rem;
+      padding: 1.5rem;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* Menu Section */
+    .menu-section {
+      background: var(--card-bg);
+      border-radius: 8px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+      overflow-y: auto;
+    }
+
+    .category-title {
+      margin: 1rem 0 0.5rem 0;
+      color: var(--accent);
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 0.3rem;
+    }
+
+    .menu-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1.2rem;
+      margin-top: 0.5rem;
+    }
+
+    .menu-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.8rem;
+      text-align: center;
+      transition: transform 0.2s, box-shadow 0.2s;
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .menu-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 14px rgba(0,0,0,0.1);
+    }
+
+    .menu-card img {
+      width: 100%;
+      height: 120px;
+      object-fit: cover;
+      border-radius: 6px;
+      margin-bottom: 0.8rem;
+    }
+
+    .item-name {
+      font-weight: 600;
+      margin-bottom: 0.3rem;
+    }
+
+    .item-price {
+      color: #666;
+      font-size: 0.95rem;
+      margin-bottom: 0.8rem;
+    }
+
+    .btn-add {
+      background-color: var(--accent);
+      color: white;
+      border: none;
+      padding: 0.5rem 1.2rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      width: 100%;
+      transition: background-color 0.2s;
+    }
+
+    .btn-add:hover {
+      background-color: #a04b2b;
+    }
+
+    /* Billing Section */
+    .billing-section {
+      background: var(--card-bg);
+      border-radius: 8px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .cart-list {
+      flex: 1;
+      overflow-y: auto;
+      margin-top: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .empty-cart-msg {
+      color: #888;
+      text-align: center;
+      margin-top: 2rem;
+    }
+
+    .cart-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.8rem;
+    }
+
+    .qty-controls button {
+      background: #e2e8f0;
+      border: none;
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .qty-controls span {
+      margin: 0 0.5rem;
+    }
+
+    .summary {
+      padding-top: 1rem;
+    }
+
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+    }
+
+    .summary-row.total {
+      font-weight: bold;
+      font-size: 1.2rem;
+      color: var(--primary);
+    }
+
+    .btn-checkout {
+      width: 100%;
+      background-color: #27ae60;
+      color: white;
+      border: none;
+      padding: 0.8rem;
+      border-radius: 4px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 1rem;
+    }
+
+    /* Receipt Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .receipt-box {
+      background: white;
+      padding: 2rem;
+      border-radius: 8px;
+      width: 320px;
+      text-align: center;
+      font-family: 'Courier Prime', monospace;
+    }
+
+    .receipt-box h2 {
+      margin-bottom: 0.5rem;
+    }
+
+    .receipt-details {
+      text-align: left;
+      margin: 1rem 0;
+      font-size: 0.9rem;
+    }
+
+    .btn-close {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+
+    @media print {
+      body * { visibility: hidden; }
+      .receipt-box, .receipt-box * { visibility: visible; }
+      .receipt-box { position: absolute; left: 0; top: 0; width: 100%; }
+      .btn-close { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="pos-app-container">
+  <header class="pos-header">
+    <div class="pos-brand">
+      <div class="terminal-badge">
+        <span class="pulse-indicator" id="pulse-indicator"></span>
+        <span>TERMINAL #04 &bull; URBAN BREW</span>
+      </div>
+      <h1 class="pos-title">Cafe Billing</h1>
+    </div>
+    <div class="header-status-pill">
+      <span id="header-status">Status: Ready</span>
+    </div>
+  </header>
+
+  <main class="pos-workspace">
+    <!-- Menu Section -->
+    <div class="menu-section">
+      <h2 class="category-title">Coffee & Drinks</h2>
+      <div class="menu-grid" id="drinks-grid"></div>
+
+      <h2 class="category-title">Snacks & Food</h2>
+      <div class="menu-grid" id="food-grid"></div>
+    </div>
+
+    <!-- Billing / Cart Section -->
+    <div class="billing-section">
+      <h2>Current Order</h2>
+      <div class="cart-list" id="cart-items">
+        <p class="empty-cart-msg">No items added yet.</p>
+      </div>
+
+      <div class="summary">
+        <div class="summary-row">
+          <span>Subtotal</span>
+          <span id="subtotal">₹0.00</span>
+        </div>
+        <div class="summary-row">
+          <span>GST (5%)</span>
+          <span id="tax">₹0.00</span>
+        </div>
+        <div class="summary-row total">
+          <span>Total</span>
+          <span id="total">₹0.00</span>
+        </div>
+        <button class="btn-checkout" id="print-receipt-btn" onclick="printReceipt()">🖨️ Print Receipt</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Receipt Modal -->
+<div class="modal" id="receipt-modal">
+  <div class="receipt-box">
+    <h2>Urban Brew Cafe</h2>
+    <p style="font-size: 0.8rem; color: #666;">Tax Invoice</p>
+    <hr style="margin: 0.5rem 0;" />
+    <div class="receipt-details" id="receipt-content"></div>
+    <hr style="margin: 0.5rem 0;" />
+    <button class="btn-close" onclick="closeModal()">Close & New Order</button>
+  </div>
+</div>
+
+<script>
+  const menu = [
+    { id: 1, name: "Espresso", price: 120, category: "drinks", image: "https://images.unsplash.com/photo-1510591509098-f4fdc6d0ff04?w=400&auto=format&fit=crop&q=80" },
+    { id: 2, name: "Cappuccino", price: 160, category: "drinks", image: "https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=400&auto=format&fit=crop&q=80" },
+    { id: 3, name: "Iced Latte", price: 180, category: "drinks", image: "https://images.unsplash.com/photo-1517701604599-bb29b565090c?w=400&auto=format&fit=crop&q=80" },
+    { id: 4, name: "Cold Brew", price: 190, category: "drinks", image: "https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?w=400&auto=format&fit=crop&q=80" },
+    { id: 5, name: "Cheese Croissant", price: 140, category: "food", image: "https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=400&auto=format&fit=crop&q=80" },
+    { id: 6, name: "Paneer Sandwich", price: 150, category: "food", image: "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?w=400&auto=format&fit=crop&q=80" },
+    { id: 7, name: "Chocolate Muffin", price: 110, category: "food", image: "https://images.unsplash.com/photo-1607958996333-41aef7caefaa?w=400&auto=format&fit=crop&q=80" },
+    { id: 8, name: "French Fries", price: 130, category: "food", image: "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=400&auto=format&fit=crop&q=80" }
+  ];
+
+  let cart = [];
+
+  // Render Menu Cards
+  function renderMenu() {
+    const drinksGrid = document.getElementById("drinks-grid");
+    const foodGrid = document.getElementById("food-grid");
+
+    menu.forEach(item => {
+      const card = document.createElement("div");
+      card.className = "menu-card";
+      card.innerHTML = `
+        <img src="${item.image}" alt="${item.name}">
+        <div class="item-name">${item.name}</div>
+        <div class="item-price">₹${item.price.toFixed(2)}</div>
+        <button class="btn-add" onclick="addToCart(${item.id})">Add to Order</button>
+      `;
+
+      if (item.category === "drinks") {
+        drinksGrid.appendChild(card);
+      } else {
+        foodGrid.appendChild(card);
+      }
+    });
+  }
+
+  // Add item to cart
+  function addToCart(id) {
+    const existing = cart.find(item => item.id === id);
+    if (existing) {
+      existing.qty++;
+    } else {
+      const menuItem = menu.find(item => item.id === id);
+      cart.push({ ...menuItem, qty: 1 });
+    }
+    updateCart();
+  }
+
+  // Adjust Quantity
+  function changeQty(id, delta) {
+    const item = cart.find(i => i.id === id);
+    if (item) {
+      item.qty += delta;
+      if (item.qty <= 0) {
+        cart = cart.filter(i => i.id !== id);
+      }
+    }
+    updateCart();
+  }
+
+  // Update UI & Calculations
+  function updateCart() {
+    const cartContainer = document.getElementById("cart-items");
+    cartContainer.innerHTML = "";
+
+    if (cart.length === 0) {
+      cartContainer.innerHTML = '<p class="empty-cart-msg">No items added yet.</p>';
+    } else {
+      cart.forEach(item => {
+        const row = document.createElement("div");
+        row.className = "cart-item";
+        row.innerHTML = `
+          <div>
+            <strong>${item.name}</strong><br>
+            <small>₹${item.price} x ${item.qty}</small>
+          </div>
+          <div class="qty-controls">
+            <button onclick="changeQty(${item.id}, -1)">-</button>
+            <span>${item.qty}</span>
+            <button onclick="changeQty(${item.id}, 1)">+</button>
+          </div>
+        `;
+        cartContainer.appendChild(row);
+      });
+    }
+
+    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+    const tax = subtotal * 0.05; // 5% GST
+    const total = subtotal + tax;
+
+    document.getElementById("subtotal").innerText = `₹${subtotal.toFixed(2)}`;
+    document.getElementById("tax").innerText = `₹${tax.toFixed(2)}`;
+    document.getElementById("total").innerText = `₹${total.toFixed(2)}`;
+  }
+
+  // Show Receipt Modal
+  function printReceipt() {
+    if (cart.length === 0) {
+      alert("Please add items to the order first!");
+      return;
+    }
+
+    const receiptContent = document.getElementById("receipt-content");
+    let html = `<p style="margin-bottom:8px;">Date: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</p>`;
+    
+    cart.forEach(item => {
+      html += `<div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+        <span>${item.name} x${item.qty}</span>
+        <span>₹${(item.price * item.qty).toFixed(2)}</span>
+      </div>`;
+    });
+
+    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+    const tax = subtotal * 0.05;
+    const total = subtotal + tax;
+
+    html += `<br><div style="border-top: 1px dashed #ccc; padding-top: 5px;">
+      <div style="display:flex; justify-content:space-between;"><span>Subtotal:</span> <span>₹${subtotal.toFixed(2)}</span></div>
+      <div style="display:flex; justify-content:space-between;"><span>GST (5%):</span> <span>₹${tax.toFixed(2)}</span></div>
+      <hr style="margin:4px 0;">
+      <div style="display:flex; justify-content:space-between;"><strong>Total:</strong> <strong>₹${total.toFixed(2)}</strong></div>
+    </div>`;
+
+    receiptContent.innerHTML = html;
+    document.getElementById("receipt-modal").style.display = "flex";
+  }
+
+  function closeModal() {
+    document.getElementById("receipt-modal").style.display = "none";
+    cart = [];
+    updateCart();
+  }
+
+  // Initialize Menu on page load
+  renderMenu();
+</script>
+</body>
+</html>
