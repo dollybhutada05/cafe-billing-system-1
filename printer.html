@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Thermal Printer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="printer.css" />
+</head>
+<body>
+
+<div class="pos-app-container">
+  <div class="ambient-glow-mesh ambient-amber" aria-hidden="true"></div>
+  <div class="ambient-glow-mesh ambient-indigo" aria-hidden="true"></div>
+
+  <div class="printer-stage-area">
+    <div class="printer-header">
+      <h2>🖨️ Thermal Printer</h2>
+      <button class="btn-close-printer" id="close-printer-btn">✕ Close</button>
+    </div>
+
+    <div class="printer-scene">
+      <div class="counter-shadow"></div>
+
+      <div class="thermal-printer" id="thermal-printer">
+        <!-- Top Lid -->
+        <div class="printer-top-lid">
+          <div class="printer-brand-logo">
+            <span class="brand-name">STAR-PRINT</span>
+            <span class="model-name">TSP-654II THERMAL POS</span>
+          </div>
+          <div class="lid-release-latch"></div>
+        </div>
+
+        <!-- LEDs -->
+        <div class="printer-dashboard-strip">
+          <div class="led-cluster">
+            <div class="led-unit">
+              <div class="led-bulb led-power active" id="led-power"></div>
+              <span class="led-label">POWER</span>
+            </div>
+            <div class="led-unit">
+              <div class="led-bulb led-error" id="led-error"></div>
+              <span class="led-label">ERROR</span>
+            </div>
+            <div class="led-unit">
+              <div class="led-bulb led-paper" id="led-paper"></div>
+              <span class="led-label">FEED</span>
+            </div>
+          </div>
+          <div class="status-feed-rate">250 mm/s</div>
+        </div>
+
+        <!-- Mouth Assembly -->
+        <div class="printer-mouth-assembly">
+          <div class="metallic-cutter-bar">
+            <div class="cutter-teeth"></div>
+          </div>
+          <div class="printer-slot-slit"></div>
+          <div class="thermal-scanline" id="thermal-scanline"></div>
+
+          <div class="paper-feed-viewport">
+            <article class="thermal-receipt" id="thermal-receipt" role="region" aria-label="Cafe Bill">
+              <!-- Perforated Edge -->
+              <div class="receipt-perforated-edge">
+                <svg class="perforation-svg" preserveAspectRatio="none" viewBox="0 0 300 12">
+                  <path d="M0,12 L5,0 L10,12 L15,0 L20,12 L25,0 L30,12 L35,0 L40,12 L45,0 L50,12 L55,0 L60,12 L65,0 L70,12 L75,0 L80,12 L85,0 L90,12 L95,0 L100,12 L105,0 L110,12 L115,0 L120,12 L125,0 L130,12 L135,0 L140,12 L145,0 L150,12 L155,0 L160,12 L165,0 L170,12 L175,0 L180,12 L185,0 L190,12 L195,0 L200,12 L205,0 L210,12 L215,0 L220,12 L225,0 L230,12 L235,0 L240,12 L245,0 L250,12 L255,0 L260,12 L265,0 L270,12 L275,0 L280,12 L285,0 L290,12 L295,0 L300,12 Z" fill="#faf9f5"/>
+                </svg>
+              </div>
+
+              <!-- Receipt Body -->
+              <div class="receipt-body" id="receipt-body">
+                <!-- Header -->
+                <div class="receipt-section receipt-header">
+                  <div class="ascii-cup-art" aria-hidden="true">
+                    ( (
+                     ) )
+                    ._______.
+                    |  CAFE |]
+                    \_______/
+                  </div>
+                  <h3 class="cafe-receipt-name">URBAN BREW CAFE</h3>
+                  <p class="receipt-tagline">Artisan Beans &bull; Fresh Bakes</p>
+                  <p class="receipt-address">142 Artisan Boulevard, Suite 3B</p>
+                  <p class="receipt-contact">Tel: (555) 839-2041 &bull; Tax ID: 88-492019</p>
+                </div>
+
+                <div class="receipt-divider double-divider">================================</div>
+
+                <!-- Metadata -->
+                <div class="receipt-section receipt-meta">
+                  <div class="meta-row">
+                    <span>DATE: <span id="receipt-date">2026-08-24</span></span>
+                    <span>TIME: <span id="receipt-time">10:42 AM</span></span>
+                  </div>
+                  <div class="meta-row">
+                    <span>INVOICE: #INV-<span id="receipt-invoice">8492</span></span>
+                    <span>POS: #04</span>
+                  </div>
+                  <div class="meta-row">
+                    <span>TABLE: T-07</span>
+                    <span>CASHIER: Maya S.</span>
+                  </div>
+                </div>
+
+                <div class="receipt-divider single-divider">--------------------------------</div>
+
+                <!-- Items Header -->
+                <div class="receipt-items-header">
+                  <span class="col-qty">QTY</span>
+                  <span class="col-desc">DESCRIPTION</span>
+                  <span class="col-price">AMT</span>
+                </div>
+
+                <div class="receipt-divider single-divider">--------------------------------</div>
+
+                <!-- Dynamic Items -->
+                <div class="receipt-items-list" id="receipt-items-list"></div>
+
+                <div class="receipt-divider single-divider">--------------------------------</div>
+
+                <!-- Calculations -->
+                <div class="receipt-section receipt-calculations">
+                  <div class="calc-row">
+                    <span>SUBTOTAL:</span>
+                    <span id="receipt-subtotal">₹0.00</span>
+                  </div>
+                  <div class="calc-row">
+                    <span>GST (5%):</span>
+                    <span id="receipt-tax">₹0.00</span>
+                  </div>
+                  <div class="receipt-divider bold-divider">--------------------------------</div>
+                  <div class="calc-row total-row">
+                    <span class="total-label">TOTAL AMOUNT:</span>
+                    <span class="total-value" id="receipt-total">₹0.00</span>
+                  </div>
+                </div>
+
+                <div class="receipt-divider double-divider">================================</div>
+
+                <!-- Payment -->
+                <div class="receipt-section receipt-payment">
+                  <div class="pay-row">
+                    <span>PAYMENT:</span>
+                    <span>APPLE PAY (CONTACTLESS)</span>
+                  </div>
+                  <div class="pay-row">
+                    <span>CARD:</span>
+                    <span>VISA PLATINUM (...4028)</span>
+                  </div>
+                  <div class="pay-row">
+                    <span>AUTH CODE:</span>
+                    <span>092841</span>
+                  </div>
+                  <div class="pay-row approval-tag">
+                    <span>STATUS:</span>
+                    <strong>TRANSACTION APPROVED</strong>
+                  </div>
+                </div>
+
+                <div class="receipt-divider single-divider">--------------------------------</div>
+
+                <!-- Perks -->
+                <div class="receipt-section receipt-perks">
+                  <p>GUEST WIFI: <strong>UrbanBrew_5G</strong></p>
+                  <p>WIFI PASSWORD: <strong>artisanbean</strong></p>
+                  <p class="loyalty-points">⭐ You earned 40 Brew Points today!</p>
+                </div>
+
+                <!-- Footer -->
+                <div class="receipt-section receipt-footer">
+                  <p class="thank-you-note">*** THANK YOU FOR VISITING! ***</p>
+                  <p class="survey-prompt">Rate your coffee at urbanbrew.com/feedback</p>
+
+                  <div class="thermal-barcode-wrap" aria-hidden="true">
+                    <div class="thermal-barcode">
+                      <span class="bar b1"></span><span class="bar b2"></span><span class="bar b1"></span><span class="bar b3"></span>
+                      <span class="bar b2"></span><span class="bar b1"></span><span class="bar b4"></span><span class="bar b1"></span>
+                      <span class="bar b3"></span><span class="bar b2"></span><span class="bar b1"></span><span class="bar b3"></span>
+                      <span class="bar b1"></span><span class="bar b4"></span><span class="bar b2"></span><span class="bar b1"></span>
+                      <span class="bar b3"></span><span class="bar b1"></span><span class="bar b2"></span><span class="bar b4"></span>
+                      <span class="bar b1"></span><span class="bar b3"></span><span class="bar b2"></span><span class="bar b1"></span>
+                      <span class="bar b4"></span><span class="bar b2"></span><span class="bar b1"></span><span class="bar b3"></span>
+                      <span class="bar b2"></span><span class="bar b1"></span><span class="bar b4"></span><span class="bar b2"></span>
+                      <span class="bar b1"></span><span class="bar b3"></span><span class="bar b2"></span><span class="bar b1"></span>
+                    </div>
+                    <div class="barcode-numbers">8 4 9 2 0 1 9 4 8 2 0 1 5</div>
+                  </div>
+
+                  <div class="cut-indicator-line">✂ - - - - - - - - - - - - - - ✂</div>
+                </div>
+              </div><!-- /.receipt-body -->
+
+              <!-- Tear Overlay -->
+              <div class="tear-prompt-overlay" id="tear-prompt-overlay">
+                <div class="tear-pill">
+                  <span>✂️ Click to Tear Off</span>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
+
+        <!-- Bottom Housing -->
+        <div class="printer-bottom-housing">
+          <div class="air-vents">
+            <span></span><span></span><span></span><span></span><span></span>
+          </div>
+          <div class="power-switch-indicator">
+            <span class="switch-dot"></span> 24V DC
+          </div>
+        </div>
+      </div><!-- /.thermal-printer -->
+    </div>
+  </div>
+</div>
+
+<script src="printer.js"></script>
+</body>
+</html>
