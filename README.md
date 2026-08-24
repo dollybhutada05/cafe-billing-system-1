@@ -1,1 +1,1 @@
-# cafe-billing-system-1
+# cafe-billing-system
