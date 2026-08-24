@@ -45,7 +45,6 @@ body {
   overflow-x: hidden;
 }
 
-/* ===== APP CONTAINER ===== */
 .pos-app-container {
   min-height: 100vh;
   display: flex;
@@ -58,7 +57,7 @@ body {
   padding: 20px;
 }
 
-/* ===== AMBIENT GLOW ===== */
+
 .ambient-glow-mesh {
   position: absolute;
   border-radius: 9999px;
@@ -81,7 +80,6 @@ body {
   background: radial-gradient(circle, rgba(99, 102, 241, 0.14) 0%, transparent 70%);
 }
 
-/* ===== PRINTER STAGE ===== */
 .printer-stage-area {
   display: flex;
   flex-direction: column;
@@ -124,7 +122,7 @@ body {
   background: rgba(255, 255, 255, 0.2);
 }
 
-/* ===== PRINTER SCENE ===== */
+
 .printer-scene {
   position: relative;
   display: flex;
@@ -141,7 +139,7 @@ body {
   z-index: 1;
 }
 
-/* ===== THERMAL PRINTER HARDWARE ===== */
+
 .thermal-printer {
   position: relative;
   width: 410px;
@@ -162,7 +160,7 @@ body {
   100% { transform: translate(0.5px, -0.5px); }
 }
 
-/* -- Top Lid -- */
+
 .printer-top-lid {
   display: flex;
   align-items: center;
@@ -202,7 +200,7 @@ body {
   background: #475569;
 }
 
-/* -- Dashboard Strip -- */
+
 .printer-dashboard-strip {
   display: flex;
   align-items: center;
@@ -255,7 +253,7 @@ body {
   color: rgba(255, 255, 255, 0.45);
 }
 
-/* -- Mouth Assembly -- */
+
 .printer-mouth-assembly {
   position: relative;
   width: 100%;
@@ -313,7 +311,7 @@ body {
   min-height: 20px;
 }
 
-/* ===== THERMAL RECEIPT ===== */
+
 .thermal-receipt {
   position: relative;
   width: var(--paper-width);
@@ -558,7 +556,7 @@ body {
   background: rgba(30, 41, 59, 0.95);
 }
 
-/* -- Bottom Housing -- */
+
 .printer-bottom-housing {
   display: flex;
   align-items: center;
@@ -594,7 +592,7 @@ body {
   box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
 }
 
-/* ===== RESPONSIVE ===== */
+
 @media (max-width: 600px) {
   .thermal-printer {
     width: 100%;
