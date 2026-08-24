@@ -1,0 +1,1514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cafe Billing + Thermal Printer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+  <style>
+    /* ===== ORIGINAL DARK GLASS THEME (from thermal printer) ===== */
+    :root {
+      --bg-deep: #0c0c0e;
+      --glass-bg-card: rgba(255, 255, 255, 0.055);
+      --glass-border: rgba(255, 255, 255, 0.09);
+      --glass-border-highlight: rgba(255, 255, 255, 0.18);
+      --glass-blur: blur(20px);
+
+      --printer-surface-top: #282c37;
+      --printer-surface-bottom: #14161d;
+      --printer-accent-bezel: rgba(255, 255, 255, 0.12);
+      --printer-slot-dark: #060709;
+
+      --led-green: #10b981;
+      --led-red: #ef4444;
+      --led-amber: #f59e0b;
+
+      --paper-bg: #fdfdfb;
+      --paper-ink: #111827;
+      --paper-ink-faint: #4b5563;
+      --paper-width: 320px;
+      --paper-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.6), 0 6px 12px rgba(0, 0, 0, 0.3);
+
+      --accent-amber: #f59e0b;
+      --accent-amber-glow: 0 10px 28px rgba(245, 158, 11, 0.28);
+
+      --font-sans: 'Plus Jakarta Sans', sans-serif;
+      --font-mono: 'Space Mono', monospace;
+      --font-receipt: 'Courier Prime', 'Space Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      width: 100%;
+      min-height: 100%;
+      background-color: var(--bg-deep);
+      color: #f8fafc;
+      font-family: var(--font-sans);
+      overflow-x: hidden;
+    }
+
+    /* ===== LAYOUT ===== */
+    .pos-app-container {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background-color: var(--bg-deep);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .ambient-glow-mesh {
+      position: absolute;
+      border-radius: 9999px;
+      pointer-events: none;
+      z-index: 0;
+      filter: blur(130px);
+    }
+    .ambient-amber {
+      top: -100px;
+      left: 20%;
+      width: 580px;
+      height: 580px;
+      background: radial-gradient(circle, rgba(245, 158, 11, 0.16) 0%, transparent 70%);
+    }
+    .ambient-indigo {
+      bottom: -80px;
+      right: 20%;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.14) 0%, transparent 70%);
+    }
+
+    /* ===== HEADER ===== */
+    .pos-header {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 36px;
+      background: rgba(18, 20, 26, 0.55);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border-bottom: 1px solid var(--glass-border);
+      z-index: 40;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .pos-brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .terminal-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      color: rgba(255, 255, 255, 0.55);
+      background: rgba(255, 255, 255, 0.04);
+      padding: 3px 10px;
+      border-radius: 99px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .pulse-indicator {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background-color: var(--led-green);
+      box-shadow: 0 0 10px var(--led-green);
+      transition: background-color 0.3s, box-shadow 0.3s;
+    }
+    .pulse-indicator.printing {
+      background-color: var(--led-amber);
+      box-shadow: 0 0 14px var(--led-amber);
+      animation: pulse-amber 0.5s infinite alternate;
+    }
+    @keyframes pulse-amber {
+      0% { opacity: 0.4; transform: scale(0.8); }
+      100% { opacity: 1; transform: scale(1.2); }
+    }
+
+    .pos-title {
+      font-size: 19px;
+      font-weight: 700;
+      color: #ffffff;
+    }
+    .header-status-pill {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: #34d399;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      padding: 5px 12px;
+      border-radius: 99px;
+      white-space: nowrap;
+    }
+
+    /* ===== MAIN WORKSPACE (two columns) ===== */
+    .pos-workspace {
+      position: relative;
+      flex: 1;
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 1.5rem;
+      padding: 1.5rem;
+      z-index: 10;
+      overflow: hidden;
+    }
+
+    /* ----- MENU SECTION (glass card) ----- */
+    .menu-section {
+      background: var(--glass-bg-card);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--glass-border);
+      border-radius: 32px;
+      padding: 1.5rem;
+      box-shadow: 0 25px 60px -20px rgba(0, 0, 0, 0.5);
+      overflow-y: auto;
+    }
+
+    .category-title {
+      margin: 1rem 0 0.5rem 0;
+      color: var(--accent-amber);
+      border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 0.3rem;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+
+    .menu-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-top: 0.5rem;
+    }
+
+    .menu-card {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 1rem;
+      text-align: center;
+      transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+    }
+    .menu-card:hover {
+      transform: translateY(-2px);
+      background: rgba(255, 255, 255, 0.08);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+    .item-name {
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: #f1f5f9;
+    }
+    .item-price {
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 0.95rem;
+      margin-bottom: 0.8rem;
+    }
+    .btn-add {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: #000;
+      border: none;
+      padding: 0.5rem 1.2rem;
+      border-radius: 99px;
+      cursor: pointer;
+      font-weight: 700;
+      transition: transform 0.15s, filter 0.2s;
+    }
+    .btn-add:hover {
+      transform: scale(1.04);
+      filter: brightness(1.1);
+    }
+
+    /* ----- BILLING SECTION (glass card) ----- */
+    .billing-section {
+      background: var(--glass-bg-card);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--glass-border);
+      border-radius: 32px;
+      padding: 1.5rem;
+      box-shadow: 0 25px 60px -20px rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .billing-section h2 {
+      color: #f1f5f9;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .cart-list {
+      flex: 1;
+      overflow-y: auto;
+      margin-top: 0.5rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      padding-bottom: 0.5rem;
+    }
+    .cart-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.8rem;
+      color: #e2e8f0;
+    }
+    .qty-controls button {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      color: #f1f5f9;
+      transition: background 0.2s;
+    }
+    .qty-controls button:hover {
+      background: rgba(255, 255, 255, 0.18);
+    }
+    .qty-controls span {
+      margin: 0 0.5rem;
+      font-weight: 600;
+    }
+
+    .summary {
+      padding-top: 1rem;
+    }
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+      color: #cbd5e1;
+    }
+    .summary-row.total {
+      font-weight: 700;
+      font-size: 1.2rem;
+      color: var(--accent-amber);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 0.8rem;
+      margin-top: 0.5rem;
+    }
+
+    .btn-checkout {
+      width: 100%;
+      background: #27ae60;
+      color: white;
+      border: none;
+      padding: 0.8rem;
+      border-radius: 99px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 1rem;
+      transition: transform 0.15s, filter 0.2s;
+    }
+    .btn-checkout:hover {
+      transform: scale(1.02);
+      filter: brightness(1.1);
+    }
+
+    /* ===== PRINTER MODAL (overlay) ===== */
+    .printer-modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(10px);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      padding: 20px;
+    }
+    .printer-modal.active {
+      display: flex;
+    }
+
+    .printer-modal-content {
+      position: relative;
+      max-width: 560px;
+      width: 100%;
+      background: var(--glass-bg-card);
+      backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--glass-border);
+      border-radius: 32px;
+      padding: 24px 20px 32px;
+      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .printer-modal-close {
+      align-self: flex-end;
+      background: none;
+      border: none;
+      color: rgba(255,255,255,0.5);
+      font-size: 24px;
+      cursor: pointer;
+      transition: color 0.2s;
+      padding: 4px 10px;
+    }
+    .printer-modal-close:hover {
+      color: #fff;
+    }
+
+    /* ===== THERMAL PRINTER HARDWARE (copied from original) ===== */
+    .printer-scene {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+    }
+    .counter-shadow {
+      position: absolute;
+      top: 190px;
+      width: 440px;
+      height: 80px;
+      background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.75) 0%, transparent 70%);
+      z-index: 1;
+    }
+
+    .thermal-printer {
+      position: relative;
+      width: 410px;
+      max-width: 100%;
+      background: linear-gradient(145deg, var(--printer-surface-top) 0%, #1e2129 35%, var(--printer-surface-bottom) 100%);
+      border-radius: 28px 28px 14px 14px;
+      box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.8);
+      border: 1px solid var(--printer-accent-bezel);
+      z-index: 10;
+      transition: transform 0.05s;
+    }
+    .thermal-printer.is-vibrating {
+      animation: printer-vibrate 0.06s infinite alternate ease-in-out;
+    }
+    @keyframes printer-vibrate {
+      0% { transform: translate(0, 0); }
+      50% { transform: translate(-0.5px, 0.5px); }
+      100% { transform: translate(0.5px, -0.5px); }
+    }
+
+    .printer-top-lid {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 24px 12px 24px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(0, 0, 0, 0.4) 100%);
+      border-radius: 26px 26px 0 0;
+      border-bottom: 2px solid rgba(0, 0, 0, 0.6);
+    }
+    .printer-brand-logo {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+    .brand-name {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: 0.5px;
+    }
+    .model-name {
+      font-size: 8.5px;
+      color: rgba(255, 255, 255, 0.45);
+      letter-spacing: 0.3px;
+    }
+    .lid-release-latch {
+      width: 34px;
+      height: 12px;
+      background: #334155;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .lid-release-latch:hover {
+      background: #475569;
+    }
+
+    .printer-dashboard-strip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 24px;
+      background: rgba(0, 0, 0, 0.4);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .led-cluster {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .led-unit {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .led-bulb {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #1f242e;
+      transition: background 0.25s, box-shadow 0.25s;
+      flex-shrink: 0;
+    }
+    .led-bulb.led-power.active {
+      background: var(--led-green);
+      box-shadow: 0 0 12px var(--led-green);
+    }
+    .led-bulb.led-power.printing {
+      animation: led-flash 0.3s infinite alternate;
+    }
+    @keyframes led-flash {
+      0% { background: #10b981; box-shadow: 0 0 14px var(--led-green); }
+      100% { background: #064e3b; box-shadow: none; }
+    }
+    .led-bulb.led-paper.active {
+      background: var(--led-amber);
+      box-shadow: 0 0 12px var(--led-amber);
+    }
+    .led-bulb.led-error.active {
+      background: var(--led-red);
+      box-shadow: 0 0 12px var(--led-red);
+    }
+    .led-label,
+    .status-feed-rate {
+      font-family: var(--font-mono);
+      font-size: 8.5px;
+      color: rgba(255, 255, 255, 0.45);
+    }
+
+    .printer-mouth-assembly {
+      position: relative;
+      width: 100%;
+      background: #08090c;
+      padding-bottom: 12px;
+      border-bottom: 2px solid rgba(255, 255, 255, 0.06);
+    }
+    .metallic-cutter-bar {
+      width: calc(100% - 32px);
+      margin: 0 auto;
+      height: 6px;
+      background: linear-gradient(180deg, #94a3b8 0%, #334155 100%);
+      border-radius: 1px;
+    }
+    .cutter-teeth {
+      width: 100%;
+      height: 2px;
+      background: repeating-linear-gradient(90deg, #cbd5e1 0, #cbd5e1 2px, transparent 2px, transparent 4px);
+    }
+    .printer-slot-slit {
+      width: calc(100% - 40px);
+      margin: 0 auto;
+      height: 10px;
+      background: var(--printer-slot-dark);
+      border-radius: 0 0 2px 2px;
+    }
+    .thermal-scanline {
+      position: absolute;
+      top: 6px;
+      left: 24px;
+      right: 24px;
+      height: 3px;
+      background: linear-gradient(90deg, transparent 0%, #38bdf8 50%, transparent 100%);
+      opacity: 0;
+      transition: opacity 0.15s ease;
+      border-radius: 2px;
+      pointer-events: none;
+    }
+    .thermal-scanline.active {
+      opacity: 1;
+      animation: scanline-sweep 0.35s infinite alternate ease-in-out;
+    }
+    @keyframes scanline-sweep {
+      0% { transform: scaleX(0.7); opacity: 0.6; }
+      100% { transform: scaleX(1); opacity: 1; }
+    }
+
+    .paper-feed-viewport {
+      position: relative;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      z-index: 12;
+      margin-top: -6px;
+      min-height: 20px;
+    }
+
+    /* ===== THERMAL RECEIPT ===== */
+    .thermal-receipt {
+      position: relative;
+      width: var(--paper-width);
+      max-width: calc(100% - 8px);
+      background-color: var(--paper-bg);
+      background-image: repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(0, 0, 0, 0.02) 1px, rgba(0, 0, 0, 0.02) 2px),
+                        linear-gradient(to bottom, #ffffff 0%, #fdfdfb 8%, #f8f6f0 95%, #f2eee6 100%);
+      color: var(--paper-ink);
+      font-family: var(--font-receipt);
+      box-shadow: var(--paper-shadow);
+      border-radius: 0 0 4px 4px;
+      overflow: hidden;
+      max-height: 0;
+      opacity: 0;
+      transform: translateY(10px) scale(0.98);
+      transition: max-height 0.9s cubic-bezier(0.34, 1.2, 0.64, 1),
+                  opacity 0.7s ease-out,
+                  transform 0.7s ease-out;
+      cursor: pointer;
+      will-change: max-height, opacity, transform;
+    }
+    .thermal-receipt.is-emerging {
+      max-height: 900px;
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+    .thermal-receipt.is-complete {
+      max-height: 900px;
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+    .thermal-receipt.torn-away {
+      animation: receipt-tear-drop 0.75s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    }
+    @keyframes receipt-tear-drop {
+      0% { transform: translateY(0) rotate(0deg) scale(1); opacity: 1; max-height: 900px; }
+      100% { transform: translateY(260px) rotate(12deg) scale(0.92); opacity: 0; max-height: 0; }
+    }
+
+    .receipt-perforated-edge {
+      width: 100%;
+      height: 10px;
+      flex-shrink: 0;
+    }
+    .perforation-svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .receipt-body {
+      padding: 16px 18px 24px 18px;
+      font-size: 11.5px;
+      line-height: 1.45;
+      background: var(--paper-bg);
+    }
+
+    .receipt-header {
+      text-align: center;
+    }
+    .ascii-cup-art {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      white-space: pre;
+      line-height: 1.2;
+      color: #1f2937;
+      margin-bottom: 2px;
+    }
+    .cafe-receipt-name {
+      font-size: 13.5px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+    .receipt-tagline,
+    .receipt-address,
+    .receipt-contact {
+      font-size: 9.5px;
+      color: var(--paper-ink-faint);
+    }
+    .receipt-tagline {
+      font-style: italic;
+    }
+
+    .receipt-divider {
+      text-align: center;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      margin: 8px 0;
+      color: #374151;
+      letter-spacing: 0.5px;
+    }
+    .receipt-divider.double-divider,
+    .receipt-divider.bold-divider {
+      font-weight: 700;
+    }
+
+    .receipt-meta,
+    .receipt-calculations,
+    .receipt-payment,
+    .receipt-items-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .meta-row,
+    .calc-row,
+    .pay-row,
+    .receipt-items-header {
+      display: flex;
+      justify-content: space-between;
+    }
+    .receipt-items-header {
+      font-weight: 700;
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .receipt-line-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .item-details {
+      flex: 1;
+      padding: 0 8px;
+      display: flex;
+      flex-direction: column;
+    }
+    .item-name {
+      font-weight: 600;
+    }
+    .item-modifiers {
+      font-size: 9.5px;
+      color: var(--paper-ink-faint);
+      font-style: italic;
+    }
+    .col-qty {
+      min-width: 28px;
+      font-weight: 600;
+    }
+    .col-price {
+      font-weight: 600;
+      text-align: right;
+      min-width: 48px;
+    }
+    .col-desc {
+      flex: 1;
+      padding: 0 8px;
+    }
+
+    .total-row {
+      font-size: 13.5px;
+      font-weight: 700;
+    }
+    .total-value {
+      font-size: 14px;
+    }
+
+    .receipt-perks,
+    .receipt-footer {
+      text-align: center;
+      margin-top: 8px;
+    }
+    .receipt-perks p {
+      font-size: 10px;
+      margin: 2px 0;
+    }
+    .loyalty-points {
+      color: #b45309;
+      font-weight: 600;
+      font-size: 10.5px !important;
+      margin-top: 4px !important;
+    }
+    .thank-you-note {
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: 0.5px;
+    }
+    .survey-prompt {
+      font-size: 9.5px;
+      color: var(--paper-ink-faint);
+    }
+
+    .thermal-barcode-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 6px 0 4px;
+    }
+    .thermal-barcode {
+      display: flex;
+      height: 36px;
+      gap: 2px;
+      background: #ffffff;
+      padding: 0 8px;
+      align-items: center;
+    }
+    .thermal-barcode .bar {
+      background: #000000;
+      height: 30px;
+    }
+    .thermal-barcode .bar.b1 { width: 1.5px; }
+    .thermal-barcode .bar.b2 { width: 3px; }
+    .thermal-barcode .bar.b3 { width: 4.5px; }
+    .thermal-barcode .bar.b4 { width: 6px; }
+    .barcode-numbers {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 2px;
+      margin-top: 2px;
+    }
+
+    .cut-indicator-line {
+      font-size: 10px;
+      color: #9ca3af;
+      margin-top: 6px;
+      font-family: var(--font-mono);
+      letter-spacing: 1px;
+    }
+
+    .tear-prompt-overlay {
+      position: absolute;
+      bottom: 16px;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+      pointer-events: none;
+      z-index: 5;
+    }
+    .thermal-receipt.is-complete .tear-prompt-overlay {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .tear-pill {
+      background: rgba(15, 23, 42, 0.92);
+      color: #f8fafc;
+      padding: 6px 16px;
+      border-radius: 99px;
+      font-size: 11px;
+      font-family: var(--font-sans);
+      backdrop-filter: blur(6px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+      transition: transform 0.2s;
+    }
+    .thermal-receipt.is-complete .tear-pill:hover {
+      transform: scale(1.04);
+      background: rgba(30, 41, 59, 0.95);
+    }
+
+    .printer-bottom-housing {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 24px;
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 0 0 14px 14px;
+    }
+    .air-vents {
+      display: flex;
+      gap: 6px;
+    }
+    .air-vents span {
+      width: 14px;
+      height: 3px;
+      background: rgba(0, 0, 0, 0.8);
+      border-radius: 1px;
+    }
+    .power-switch-indicator {
+      font-family: var(--font-mono);
+      font-size: 9.5px;
+      color: rgba(255, 255, 255, 0.45);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .switch-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #10b981;
+      display: inline-block;
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 768px) {
+      .pos-workspace {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        padding: 1rem;
+      }
+      .menu-grid {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      }
+    }
+    @media (max-width: 600px) {
+      .pos-header {
+        padding: 12px 16px;
+      }
+      .pos-title {
+        font-size: 16px;
+      }
+      .terminal-badge {
+        font-size: 9px;
+        padding: 2px 8px;
+      }
+      .printer-stage-area {
+        padding: 20px 12px;
+        border-radius: 20px;
+      }
+      .thermal-printer {
+        width: 100%;
+        border-radius: 18px 18px 10px 10px;
+      }
+      .printer-top-lid {
+        padding: 12px 14px 10px 14px;
+        border-radius: 18px 18px 0 0;
+      }
+      .printer-dashboard-strip {
+        padding: 8px 14px;
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+      .printer-mouth-assembly {
+        padding-bottom: 8px;
+      }
+      .printer-bottom-housing {
+        padding: 10px 14px;
+        border-radius: 0 0 10px 10px;
+      }
+      .receipt-body {
+        padding: 12px 12px 18px 12px;
+        font-size: 10.5px;
+      }
+      .cafe-receipt-name {
+        font-size: 12px;
+      }
+      .counter-shadow {
+        width: 100%;
+        top: 160px;
+      }
+      .brand-name {
+        font-size: 11px;
+      }
+      .model-name {
+        font-size: 7px;
+      }
+      .led-cluster {
+        gap: 10px;
+      }
+      .paper-feed-viewport {
+        min-height: 10px;
+      }
+      .thermal-receipt {
+        width: 100%;
+        max-width: calc(100% - 4px);
+      }
+      .receipt-divider {
+        font-size: 10px;
+        margin: 6px 0;
+      }
+      .total-row {
+        font-size: 12px;
+      }
+      .header-status-pill {
+        font-size: 9px;
+        padding: 3px 10px;
+      }
+    }
+    @media (max-width: 420px) {
+      .pos-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+      }
+      .pos-brand {
+        justify-content: center;
+      }
+      .header-status-pill {
+        text-align: center;
+      }
+      .printer-stage-area {
+        padding: 14px 8px;
+      }
+      .receipt-body {
+        padding: 10px 10px 14px 10px;
+        font-size: 9.5px;
+      }
+      .receipt-line-item {
+        flex-wrap: wrap;
+      }
+      .item-details {
+        padding: 0 4px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="pos-app-container">
+  <!-- Ambient Glow -->
+  <div class="ambient-glow-mesh ambient-amber" aria-hidden="true"></div>
+  <div class="ambient-glow-mesh ambient-indigo" aria-hidden="true"></div>
+
+  <!-- Header -->
+  <header class="pos-header">
+    <div class="pos-brand">
+      <div class="terminal-badge">
+        <span class="pulse-indicator" id="pulse-indicator"></span>
+        <span>TERMINAL #04 &bull; URBAN BREW</span>
+      </div>
+      <h1 class="pos-title">Cafe Billing + Printer</h1>
+    </div>
+    <div class="header-status-pill">
+      <span id="header-status-text">Status: Ready</span>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <main class="pos-workspace">
+    <!-- Menu Section -->
+    <div class="menu-section">
+      <h2 class="category-title">Coffee & Drinks</h2>
+      <div class="menu-grid" id="drinks-grid"></div>
+
+      <h2 class="category-title">Snacks & Food</h2>
+      <div class="menu-grid" id="food-grid"></div>
+    </div>
+
+    <!-- Billing Section -->
+    <div class="billing-section">
+      <h2>Current Order</h2>
+      <div class="cart-list" id="cart-items">
+        <p style="color: #888; text-align: center; margin-top: 2rem;">No items added yet.</p>
+      </div>
+
+      <div class="summary">
+        <div class="summary-row">
+          <span>Subtotal</span>
+          <span id="subtotal">₹0.00</span>
+        </div>
+        <div class="summary-row">
+          <span>GST (5%)</span>
+          <span id="tax">₹0.00</span>
+        </div>
+        <div class="summary-row total">
+          <span>Total</span>
+          <span id="total">₹0.00</span>
+        </div>
+        <button class="btn-checkout" id="print-receipt-btn">🖨️ Print Receipt</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ===== PRINTER MODAL ===== -->
+<div class="printer-modal" id="printer-modal">
+  <div class="printer-modal-content">
+    <button class="printer-modal-close" id="printer-modal-close">✕</button>
+
+    <!-- Printer Scene (from original) -->
+    <div class="printer-scene">
+      <div class="counter-shadow"></div>
+      <div class="thermal-printer" id="thermal-printer">
+        <!-- Top Lid -->
+        <div class="printer-top-lid">
+          <div class="printer-brand-logo">
+            <span class="brand-name">STAR-PRINT</span>
+            <span class="model-name">TSP-654II THERMAL POS</span>
+          </div>
+          <div class="lid-release-latch" title="Paper Chamber Latch"></div>
+        </div>
+
+        <!-- Status LEDs -->
+        <div class="printer-dashboard-strip">
+          <div class="led-cluster">
+            <div class="led-unit">
+              <div class="led-bulb led-power active" id="led-power"></div>
+              <span class="led-label">POWER</span>
+            </div>
+            <div class="led-unit">
+              <div class="led-bulb led-error" id="led-error"></div>
+              <span class="led-label">ERROR</span>
+            </div>
+            <div class="led-unit">
+              <div class="led-bulb led-paper" id="led-paper"></div>
+              <span class="led-label">FEED</span>
+            </div>
+          </div>
+          <div class="status-feed-rate">250 mm/s</div>
+        </div>
+
+        <!-- Mouth Assembly -->
+        <div class="printer-mouth-assembly">
+          <div class="metallic-cutter-bar">
+            <div class="cutter-teeth"></div>
+          </div>
+          <div class="printer-slot-slit"></div>
+          <div class="thermal-scanline" id="thermal-scanline"></div>
+
+          <div class="paper-feed-viewport">
+            <article class="thermal-receipt" id="thermal-receipt" role="region" aria-label="Cafe Bill">
+              <!-- Perforated edge -->
+              <div class="receipt-perforated-edge">
+                <svg class="perforation-svg" preserveAspectRatio="none" viewBox="0 0 300 12">
+                  <path d="M0,12 L5,0 L10,12 L15,0 L20,12 L25,0 L30,12 L35,0 L40,12 L45,0 L50,12 L55,0 L60,12 L65,0 L70,12 L75,0 L80,12 L85,0 L90,12 L95,0 L100,12 L105,0 L110,12 L115,0 L120,12 L125,0 L130,12 L135,0 L140,12 L145,0 L150,12 L155,0 L160,12 L165,0 L170,12 L175,0 L180,12 L185,0 L190,12 L195,0 L200,12 L205,0 L210,12 L215,0 L220,12 L225,0 L230,12 L235,0 L240,12 L245,0 L250,12 L255,0 L260,12 L265,0 L270,12 L275,0 L280,12 L285,0 L290,12 L295,0 L300,12 Z" fill="#faf9f5"/>
+                </svg>
+              </div>
+
+              <!-- Receipt Body (dynamic) -->
+              <div class="receipt-body" id="receipt-body">
+                <!-- Header -->
+                <div class="receipt-section receipt-header">
+                  <div class="ascii-cup-art" aria-hidden="true">
+                    ( (
+                     ) )
+                    ._______.
+                    |  CAFE |]
+                    \_______/
+                  </div>
+                  <h3 class="cafe-receipt-name">URBAN BREW CAFE</h3>
+                  <p class="receipt-tagline">Artisan Beans &bull; Fresh Bakes</p>
+                  <p class="receipt-address">142 Artisan Boulevard, Suite 3B</p>
+                  <p class="receipt-contact">Tel: (555) 839-2041 &bull; Tax ID: 88-492019</p>
+                </div>
+
+                <div class="receipt-divider double-divider">================================</div>
+
+                <!-- Metadata -->
+                <div class="receipt-section receipt-meta">
+                  <div class="meta-row">
+                    <span>DATE: <span id="receipt-date">2026-08-24</span></span>
+                    <span>TIME: <span id="receipt-time">10:42 AM</span></span>
+                  </div>
+                  <div class="meta-row">
+                    <span>INVOICE: #INV-<span id="receipt-invoice">8492</span></span>
+                    <span>POS: #04</span>
+                  </div>
+                  <div class="meta-row">
+                    <span>TABLE: T-07</span>
+                    <span>CASHIER: Maya S.</span>
+                  </div>
+                </div>
+
+                <div class="receipt-divider single-divider">--------------------------------</div>
+
+                <!-- Items Header -->
+                <div class="receipt-items-header">
+                  <span class="col-qty">QTY</span>
+                  <span class="col-desc">DESCRIPTION</span>
+                  <span class="col-price">AMT</span>
+                </div>
+
+                <div class="receipt-divider single-divider">--------------------------------</div>
+
+                <!-- Dynamic Items List -->
+                <div class="receipt-items-list" id="receipt-items-list"></div>
+
+                <div class="receipt-divider single-divider">--------------------------------</div>
+
+                <!-- Calculations -->
+                <div class="receipt-section receipt-calculations">
+                  <div class="calc-row">
+                    <span>SUBTOTAL:</span>
+                    <span id="receipt-subtotal">₹0.00</span>
+                  </div>
+                  <div class="calc-row">
+                    <span>GST (5%):</span>
+                    <span id="receipt-tax">₹0.00</span>
+                  </div>
+                  <div class="receipt-divider bold-divider">--------------------------------</div>
+                  <div class="calc-row total-row">
+                    <span class="total-label">TOTAL AMOUNT:</span>
+                    <span class="total-value" id="receipt-total">₹0.00</span>
+                  </div>
+                </div>
+
+                <div class="receipt-divider double-divider">================================</div>
+
+                <!-- Payment -->
+                <div class="receipt-section receipt-payment">
+                  <div class="pay-row">
+                    <span>PAYMENT:</span>
+                    <span>APPLE PAY (CONTACTLESS)</span>
+                  </div>
+                  <div class="pay-row">
+                    <span>CARD:</span>
+                    <span>VISA PLATINUM (...4028)</span>
+                  </div>
+                  <div class="pay-row">
+                    <span>AUTH CODE:</span>
+                    <span>092841</span>
+                  </div>
+                  <div class="pay-row approval-tag">
+                    <span>STATUS:</span>
+                    <strong>TRANSACTION APPROVED</strong>
+                  </div>
+                </div>
+
+                <div class="receipt-divider single-divider">--------------------------------</div>
+
+                <!-- Perks -->
+                <div class="receipt-section receipt-perks">
+                  <p>GUEST WIFI: <strong>UrbanBrew_5G</strong></p>
+                  <p>WIFI PASSWORD: <strong>artisanbean</strong></p>
+                  <p class="loyalty-points">⭐ You earned 40 Brew Points today!</p>
+                </div>
+
+                <!-- Footer & Barcode -->
+                <div class="receipt-section receipt-footer">
+                  <p class="thank-you-note">*** THANK YOU FOR VISITING! ***</p>
+                  <p class="survey-prompt">Rate your coffee at urbanbrew.com/feedback</p>
+
+                  <div class="thermal-barcode-wrap" aria-hidden="true">
+                    <div class="thermal-barcode">
+                      <span class="bar b1"></span><span class="bar b2"></span><span class="bar b1"></span><span class="bar b3"></span>
+                      <span class="bar b2"></span><span class="bar b1"></span><span class="bar b4"></span><span class="bar b1"></span>
+                      <span class="bar b3"></span><span class="bar b2"></span><span class="bar b1"></span><span class="bar b3"></span>
+                      <span class="bar b1"></span><span class="bar b4"></span><span class="bar b2"></span><span class="bar b1"></span>
+                      <span class="bar b3"></span><span class="bar b1"></span><span class="bar b2"></span><span class="bar b4"></span>
+                      <span class="bar b1"></span><span class="bar b3"></span><span class="bar b2"></span><span class="bar b1"></span>
+                      <span class="bar b4"></span><span class="bar b2"></span><span class="bar b1"></span><span class="bar b3"></span>
+                      <span class="bar b2"></span><span class="bar b1"></span><span class="bar b4"></span><span class="bar b2"></span>
+                      <span class="bar b1"></span><span class="bar b3"></span><span class="bar b2"></span><span class="bar b1"></span>
+                    </div>
+                    <div class="barcode-numbers">8 4 9 2 0 1 9 4 8 2 0 1 5</div>
+                  </div>
+
+                  <div class="cut-indicator-line">✂ - - - - - - - - - - - - - - ✂</div>
+                </div>
+              </div><!-- /.receipt-body -->
+
+              <!-- Tear Overlay -->
+              <div class="tear-prompt-overlay" id="tear-prompt-overlay">
+                <div class="tear-pill">
+                  <span>✂️ Click to Tear Off</span>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
+
+        <!-- Bottom Housing -->
+        <div class="printer-bottom-housing">
+          <div class="air-vents">
+            <span></span><span></span><span></span><span></span><span></span>
+          </div>
+          <div class="power-switch-indicator">
+            <span class="switch-dot"></span> 24V DC
+          </div>
+        </div>
+      </div><!-- /.thermal-printer -->
+    </div><!-- /.printer-scene -->
+
+  </div>
+</div>
+
+<script>
+  // ===== MENU DATA =====
+  const menu = [
+    { id: 1, name: "Espresso", price: 120, category: "drinks" },
+    { id: 2, name: "Cappuccino", price: 160, category: "drinks" },
+    { id: 3, name: "Iced Latte", price: 180, category: "drinks" },
+    { id: 4, name: "Cold Brew", price: 190, category: "drinks" },
+    { id: 5, name: "Cheese Croissant", price: 140, category: "food" },
+    { id: 6, name: "Paneer Sandwich", price: 150, category: "food" },
+    { id: 7, name: "Chocolate Muffin", price: 110, category: "food" },
+    { id: 8, name: "French Fries", price: 130, category: "food" }
+  ];
+
+  let cart = [];
+
+  // ===== RENDER MENU =====
+  function renderMenu() {
+    const drinksGrid = document.getElementById("drinks-grid");
+    const foodGrid = document.getElementById("food-grid");
+    drinksGrid.innerHTML = '';
+    foodGrid.innerHTML = '';
+
+    menu.forEach(item => {
+      const card = document.createElement("div");
+      card.className = "menu-card";
+      card.innerHTML = `
+        <div class="item-name">${item.name}</div>
+        <div class="item-price">₹${item.price.toFixed(2)}</div>
+        <button class="btn-add" onclick="addToCart(${item.id})">Add</button>
+      `;
+      if (item.category === "drinks") {
+        drinksGrid.appendChild(card);
+      } else {
+        foodGrid.appendChild(card);
+      }
+    });
+  }
+
+  // ===== CART LOGIC =====
+  function addToCart(id) {
+    const existing = cart.find(item => item.id === id);
+    if (existing) {
+      existing.qty++;
+    } else {
+      const menuItem = menu.find(item => item.id === id);
+      cart.push({ ...menuItem, qty: 1 });
+    }
+    updateCart();
+  }
+
+  function changeQty(id, delta) {
+    const item = cart.find(i => i.id === id);
+    if (item) {
+      item.qty += delta;
+      if (item.qty <= 0) {
+        cart = cart.filter(i => i.id !== id);
+      }
+    }
+    updateCart();
+  }
+
+  function updateCart() {
+    const cartContainer = document.getElementById("cart-items");
+    cartContainer.innerHTML = "";
+
+    if (cart.length === 0) {
+      cartContainer.innerHTML = '<p style="color: #888; text-align: center; margin-top: 2rem;">No items added yet.</p>';
+    } else {
+      cart.forEach(item => {
+        const row = document.createElement("div");
+        row.className = "cart-item";
+        row.innerHTML = `
+          <div>
+            <strong>${item.name}</strong><br>
+            <small>₹${item.price} x ${item.qty}</small>
+          </div>
+          <div class="qty-controls">
+            <button onclick="changeQty(${item.id}, -1)">-</button>
+            <span>${item.qty}</span>
+            <button onclick="changeQty(${item.id}, 1)">+</button>
+          </div>
+        `;
+        cartContainer.appendChild(row);
+      });
+    }
+
+    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+    const tax = subtotal * 0.05;
+    const total = subtotal + tax;
+
+    document.getElementById("subtotal").innerText = `₹${subtotal.toFixed(2)}`;
+    document.getElementById("tax").innerText = `₹${tax.toFixed(2)}`;
+    document.getElementById("total").innerText = `₹${total.toFixed(2)}`;
+  }
+
+  // ===== PRINTER SIMULATION (merged from original) =====
+  const printerModal = document.getElementById('printer-modal');
+  const modalClose = document.getElementById('printer-modal-close');
+  const printBtn = document.getElementById('print-receipt-btn');
+  const receipt = document.getElementById('thermal-receipt');
+  const tearOverlay = document.getElementById('tear-prompt-overlay');
+  const printer = document.getElementById('thermal-printer');
+  const ledPower = document.getElementById('led-power');
+  const ledPaper = document.getElementById('led-paper');
+  const ledError = document.getElementById('led-error');
+  const scanline = document.getElementById('thermal-scanline');
+  const statusText = document.getElementById('header-status-text');
+  const pulseIndicator = document.getElementById('pulse-indicator');
+
+  let isPrinting = false;
+  let isComplete = false;
+
+  function updateStatus(text, isReady) {
+    statusText.textContent = 'Status: ' + text;
+    statusText.style.color = isReady ? '#34d399' : '#f59e0b';
+  }
+
+  function setLEDs(state) {
+    ledPower.classList.remove('printing', 'active');
+    ledPaper.classList.remove('active');
+    ledError.classList.remove('active');
+
+    if (state === 'idle') {
+      ledPower.classList.add('active');
+    } else if (state === 'printing') {
+      ledPower.classList.add('printing');
+      ledPaper.classList.add('active');
+    } else if (state === 'done') {
+      ledPower.classList.add('active');
+    } else if (state === 'error') {
+      ledError.classList.add('active');
+    }
+  }
+
+  function setPulse(state) {
+    if (state === 'printing') {
+      pulseIndicator.classList.add('printing');
+    } else {
+      pulseIndicator.classList.remove('printing');
+    }
+  }
+
+  function resetReceipt() {
+    receipt.classList.remove('is-emerging', 'is-complete', 'torn-away');
+    receipt.style.maxHeight = '0';
+    receipt.style.opacity = '0';
+    receipt.style.transform = 'translateY(10px) scale(0.98)';
+    tearOverlay.style.opacity = '0';
+  }
+
+  // Build receipt content from cart
+  function populateReceipt() {
+    const itemsList = document.getElementById('receipt-items-list');
+    itemsList.innerHTML = '';
+
+    cart.forEach(item => {
+      const line = document.createElement('div');
+      line.className = 'receipt-line-item';
+      line.innerHTML = `
+        <span class="col-qty">${item.qty}x</span>
+        <div class="item-details">
+          <span class="item-name">${item.name}</span>
+        </div>
+        <span class="col-price">₹${(item.price * item.qty).toFixed(2)}</span>
+      `;
+      itemsList.appendChild(line);
+    });
+
+    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+    const tax = subtotal * 0.05;
+    const total = subtotal + tax;
+
+    document.getElementById('receipt-subtotal').textContent = `₹${subtotal.toFixed(2)}`;
+    document.getElementById('receipt-tax').textContent = `₹${tax.toFixed(2)}`;
+    document.getElementById('receipt-total').textContent = `₹${total.toFixed(2)}`;
+
+    // Update date/time
+    const now = new Date();
+    document.getElementById('receipt-date').textContent = now.toISOString().split('T')[0];
+    document.getElementById('receipt-time').textContent = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    document.getElementById('receipt-invoice').textContent = Math.floor(Math.random() * 9000 + 1000);
+  }
+
+  function printReceipt() {
+    if (cart.length === 0) {
+      alert('Please add items to the order first!');
+      return;
+    }
+    if (isPrinting) return;
+
+    // Show modal and populate receipt
+    printerModal.classList.add('active');
+    populateReceipt();
+    resetReceipt();
+
+    isPrinting = true;
+    isComplete = false;
+    printBtn.disabled = true;
+    updateStatus('Printing...', false);
+    setPulse('printing');
+    setLEDs('printing');
+
+    // Printer vibration & scanline
+    printer.classList.add('is-vibrating');
+    scanline.classList.add('active');
+
+    // Emerge receipt
+    setTimeout(() => {
+      receipt.classList.add('is-emerging');
+    }, 280);
+
+    // Complete printing
+    setTimeout(() => {
+      printer.classList.remove('is-vibrating');
+      scanline.classList.remove('active');
+      setLEDs('done');
+      setPulse('idle');
+
+      receipt.classList.remove('is-emerging');
+      receipt.classList.add('is-complete');
+      receipt.style.maxHeight = '900px';
+      receipt.style.opacity = '1';
+      receipt.style.transform = 'translateY(0) scale(1)';
+
+      tearOverlay.style.opacity = '1';
+      isComplete = true;
+      isPrinting = false;
+      printBtn.disabled = false;
+      updateStatus('Ready', true);
+    }, 1600);
+  }
+
+  // Tear off receipt
+  function tearReceipt(e) {
+    if (!isComplete) return;
+    if (receipt.classList.contains('torn-away')) return;
+
+    receipt.classList.add('torn-away');
+    tearOverlay.style.opacity = '0';
+    isComplete = false;
+
+    setTimeout(() => {
+      receipt.classList.remove('is-complete', 'torn-away');
+      receipt.style.maxHeight = '0';
+      receipt.style.opacity = '0';
+      receipt.style.transform = 'translateY(10px) scale(0.98)';
+      // Close modal after tear-off
+      setTimeout(() => {
+        printerModal.classList.remove('active');
+        // Reset cart after closing? optional, keep for now
+      }, 300);
+    }, 850);
+  }
+
+  // ===== EVENT LISTENERS =====
+  printBtn.addEventListener('click', printReceipt);
+  modalClose.addEventListener('click', () => {
+    printerModal.classList.remove('active');
+    // Reset receipt state
+    resetReceipt();
+    isComplete = false;
+    isPrinting = false;
+    printBtn.disabled = false;
+    setLEDs('idle');
+    setPulse('idle');
+    updateStatus('Ready', true);
+  });
+
+  // Click on receipt or tear pill to tear
+  receipt.addEventListener('click', tearReceipt);
+  const tearPill = document.querySelector('.tear-pill');
+  if (tearPill) {
+    tearPill.addEventListener('click', (e) => {
+      e.stopPropagation();
+      tearReceipt(e);
+    });
+  }
+
+  // Keyboard shortcut: Enter/Space to print if modal not active
+  document.addEventListener('keydown', (e) => {
+    if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) {
+      if (document.activeElement?.tagName !== 'INPUT' && !printerModal.classList.contains('active')) {
+        e.preventDefault();
+        if (!printBtn.disabled) printBtn.click();
+      }
+    }
+  });
+
+  // ===== INIT =====
+  renderMenu();
+  updateCart();
+  resetReceipt();
+  setLEDs('idle');
+  updateStatus('Ready', true);
+</script>
+
+</body>
+</html>
